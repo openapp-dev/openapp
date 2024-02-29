@@ -1,0 +1,96 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.13.0
+  labels:
+    openapp.dev/crd-install: "true"
+  name: appinstances.app.openapp.dev
+spec:
+  group: app.openapp.dev
+  names:
+    categories:
+    - openapp-dev
+    kind: AppInstance
+    listKind: AppInstanceList
+    plural: appinstances
+    singular: appinstance
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.appTemplate
+      name: APP-TEMPLATE
+      type: string
+    - jsonPath: .status.appReady
+      name: APP-READY
+      type: string
+    - jsonPath: .spec.publicServiceClass
+      name: PUBLIC-SERVICE
+      type: string
+    - jsonPath: .status.externalServiceURL
+      name: PUBLIC-URL
+      type: string
+    - jsonPath: .status.localServiceURL
+      name: LOCAL-URL
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              appTemplate:
+                type: string
+              inputs:
+                type: string
+              publicServiceClass:
+                type: string
+            required:
+            - appTemplate
+            type: object
+          status:
+            properties:
+              appReady:
+                type: boolean
+              derivedResources:
+                items:
+                  properties:
+                    apiVersion:
+                      type: string
+                    kind:
+                      type: string
+                    name:
+                      type: string
+                  required:
+                  - apiVersion
+                  - kind
+                  - name
+                  type: object
+                type: array
+              externalServiceURL:
+                type: string
+              localServiceURL:
+                type: string
+              message:
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

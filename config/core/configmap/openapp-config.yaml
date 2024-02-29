@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openapp-config
+  namespace: openapp-system
+data:
+  registry: |
+    https://github.com/openapp-dev/openapp-registry@main
+  userName: "openapp"
+  password: "openapp"

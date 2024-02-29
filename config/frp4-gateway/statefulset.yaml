@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: frp4-gateway
+  namespace: openapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frp4-gateway
+  template:
+    metadata:
+      labels:
+        app: frp4-gateway
+    spec:
+      serviceAccountName: openapp-sa
+      securityContext:
+        runAsUser: 0
+      volumes:
+      - name: frpc-config
+        configMap:
+          name: frp4-gateway-config
+      containers:
+      - name: frpc
+        image: cesign/frpc:latest
+        volumeMounts:
+        - name: frpc-config
+          mountPath: /openapp/frp/frpc.toml
+          subPath: initConfig
+      - name: frp4-gateway
+        image: ko://github.com/openapp-dev/openapp/cmd/frp4
+        env:
+        - name: SERVICE_CLASS
+          value: "frp4-gateway"
+

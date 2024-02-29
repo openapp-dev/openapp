@@ -1,0 +1,70 @@
+package router
+
+import (
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"k8s.io/client-go/kubernetes"
+
+	"github.com/openapp-dev/openapp/pkg/apiserver/handler"
+	"github.com/openapp-dev/openapp/pkg/generated/clientset/versioned"
+	"github.com/openapp-dev/openapp/pkg/utils"
+)
+
+func NewGinContextWithClientLister(k8sClient kubernetes.Interface,
+	openappClient versioned.Interface,
+	openappHelper *utils.OpenAPPHelper) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(utils.OpenAPPHelperKey, openappHelper)
+		c.Next()
+	}
+}
+
+func NewOpenAPPServerRouter(k8sClient kubernetes.Interface,
+	openappClient versioned.Interface,
+	openappHelper *utils.OpenAPPHelper) *gin.Engine {
+	router := gin.New()
+
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"*"}
+	config.AllowHeaders = []string{"*"}
+	corsHandler := cors.New(config)
+
+	router.Use(corsHandler)
+	router.Use(NewGinContextWithClientLister(k8sClient, openappClient, openappHelper))
+
+	initAPPRouter(router, corsHandler)
+	initPublicServiceRouter(router, corsHandler)
+	initConfigRouter(router, corsHandler)
+
+	return router
+}
+
+func initAPPRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
+	appGroup := router.Group("/api/v1/apps")
+	appGroup.GET("/instances", handler.ListAllAppInstancesHandler)
+	appGroup.GET("/instances/:instanceName", handler.GetAppInstanceHandler)
+	appGroup.POST("/instances/:instanceName", handler.CreateOrUpdateAppInstanceHandler)
+	appGroup.DELETE("/instances/:instanceName", handler.DeleteAppInstanceHandler)
+
+	appGroup.GET("/templates", handler.ListAllAppTemplatesHandler)
+	appGroup.GET("/templates/:templateName", handler.GetAppTemplateHandler)
+	appGroup.Use(corsHandler)
+}
+
+func initPublicServiceRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
+	publicServiceGroup := router.Group("/api/v1/publicservices")
+	publicServiceGroup.GET("/templates", handler.ListAllPublicServiceTemplatesHandler)
+	publicServiceGroup.GET("/templates/:templateName", handler.GetPublicServiceTemplateHandler)
+
+	publicServiceGroup.GET("/instances/:instanceName", handler.GetPublicServiceInstanceHandler)
+	publicServiceGroup.POST("/instances/:instanceName", handler.CreateOrUpdatePublicServiceInstanceHandler)
+	publicServiceGroup.DELETE("/instances/:instanceName", handler.DeletePublicServiceInstanceHandler)
+	publicServiceGroup.Use(corsHandler)
+}
+
+func initConfigRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
+	configGroup := router.Group("/api/v1/config")
+	configGroup.GET("", handler.GetConfigHandler)
+	configGroup.POST("", handler.UpdateConfigHandler)
+	configGroup.Use(corsHandler)
+}
