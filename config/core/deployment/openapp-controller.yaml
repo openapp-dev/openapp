@@ -40,7 +40,11 @@ spec:
           volumeMounts:
             - name: openapp
               mountPath: /root/openapp
-          env:
-            - name: LOCAL_IP
-              value: "localhost"
+          # env:
+          #   - name: http_proxy
+          #     value: "http://172.25.80.1:7890"
+          #   - name: https_proxy
+          #     value: "http://172.25.80.1:7890"
+          #   - name: no_proxy
+          #     value: "10.0.0.0/8,localhost,127.0.0.1"
       terminationGracePeriodSeconds: 30

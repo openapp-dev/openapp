@@ -3,11 +3,11 @@ package registry
 import (
 	"context"
 	"path"
+	"reflect"
 	"strings"
 	"time"
 
 	gitv5 "github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -44,6 +44,17 @@ func NewRegistryController(openappHelper *utils.OpenAPPHelper) types.ControllerI
 				rc.workqueue.Add(obj)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
+				oldCM, ok := oldObj.(*v1.ConfigMap)
+				if !ok {
+					return
+				}
+				newCM, ok := newObj.(*v1.ConfigMap)
+				if !ok {
+					return
+				}
+				if reflect.DeepEqual(oldCM.Data, newCM.Data) {
+					return
+				}
 				rc.workqueue.Add(newObj)
 			},
 			DeleteFunc: func(obj interface{}) {
@@ -85,10 +96,10 @@ func (rc *RegistryController) Reconcile(obj interface{}) error {
 	}
 
 	cmCopy := cm.DeepCopy()
-	if cmCopy.Labels == nil {
-		cmCopy.Labels = map[string]string{}
+	if cmCopy.Annotations == nil {
+		cmCopy.Annotations = map[string]string{}
 	}
-	cmCopy.Labels[utils.RegistryUpdateTimeAnnotationKey] = time.Now().Format(time.RFC3339)
+	cmCopy.Annotations[utils.RegistryUpdateTimeAnnotationKey] = time.Now().Format(time.RFC3339)
 	_, err := rc.k8sClient.CoreV1().ConfigMaps(utils.SystemNamespace).
 		Update(context.Background(), cmCopy, metav1.UpdateOptions{})
 	if err != nil {
@@ -101,10 +112,10 @@ func (rc *RegistryController) Reconcile(obj interface{}) error {
 
 func CloneOpenAPPRegistry(registryList []string) error {
 	for _, registry := range registryList {
-		repoURL, branch, dir := getRepoURLAndBranch(registry)
+		/// TBD: Can't clone specific branch, still don't know why
+		repoURL, _, dir := getRepoURLAndBranch(registry)
 		r, err := gitv5.PlainClone(path.Join(utils.RegistryCachePath, dir), false, &gitv5.CloneOptions{
 			URL:             repoURL,
-			ReferenceName:   plumbing.ReferenceName(branch),
 			InsecureSkipTLS: true,
 		})
 		if err != nil {
