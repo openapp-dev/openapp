@@ -10,6 +10,7 @@ import (
 	gitv5 "github.com/go-git/go-git/v5"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -41,7 +42,14 @@ func NewRegistryController(openappHelper *utils.OpenAPPHelper) types.ControllerI
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				rc.workqueue.Add(obj)
+				cm, ok := obj.(*v1.ConfigMap)
+				if !ok {
+					return
+				}
+				rc.workqueue.Add(pkgtypes.NamespacedName{
+					Namespace: cm.Namespace,
+					Name:      cm.Name,
+				})
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
 				oldCM, ok := oldObj.(*v1.ConfigMap)
@@ -55,10 +63,20 @@ func NewRegistryController(openappHelper *utils.OpenAPPHelper) types.ControllerI
 				if reflect.DeepEqual(oldCM.Data, newCM.Data) {
 					return
 				}
-				rc.workqueue.Add(newObj)
+				rc.workqueue.Add(pkgtypes.NamespacedName{
+					Namespace: utils.SystemNamespace,
+					Name:      utils.SystemConfigMap,
+				})
 			},
 			DeleteFunc: func(obj interface{}) {
-				rc.workqueue.Add(obj)
+				cm, ok := obj.(*v1.ConfigMap)
+				if !ok {
+					return
+				}
+				rc.workqueue.Add(pkgtypes.NamespacedName{
+					Namespace: cm.Namespace,
+					Name:      cm.Name,
+				})
 			},
 		},
 	})
@@ -76,15 +94,18 @@ func (rc *RegistryController) Start() {
 			klog.Errorf("Failed to get config: %v", err)
 			continue
 		}
-		rc.workqueue.Add(cm)
+		rc.workqueue.Add(pkgtypes.NamespacedName{
+			Namespace: cm.Namespace,
+			Name:      cm.Name,
+		})
 	}
 }
 
-func (rc *RegistryController) Reconcile(obj interface{}) error {
+func (rc *RegistryController) Reconcile(_ pkgtypes.NamespacedName) error {
 	klog.Infof("Reconciling config update...")
-
-	cm, ok := obj.(*v1.ConfigMap)
-	if !ok {
+	cm, err := rc.k8sClient.CoreV1().ConfigMaps(utils.SystemNamespace).
+		Get(context.Background(), utils.SystemConfigMap, metav1.GetOptions{})
+	if err != nil {
 		klog.Errorf("Failed to convert object to configmap")
 		return nil
 	}
@@ -100,7 +121,7 @@ func (rc *RegistryController) Reconcile(obj interface{}) error {
 		cmCopy.Annotations = map[string]string{}
 	}
 	cmCopy.Annotations[utils.RegistryUpdateTimeAnnotationKey] = time.Now().Format(time.RFC3339)
-	_, err := rc.k8sClient.CoreV1().ConfigMaps(utils.SystemNamespace).
+	_, err = rc.k8sClient.CoreV1().ConfigMaps(utils.SystemNamespace).
 		Update(context.Background(), cmCopy, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("Failed to update configmap: %v", err)

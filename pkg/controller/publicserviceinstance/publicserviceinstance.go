@@ -2,15 +2,17 @@ package publicserviceinstance
 
 import (
 	"context"
-	"fmt"
 	"path"
 	"reflect"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 
+	appv1alpha1 "github.com/openapp-dev/openapp/pkg/apis/app/v1alpha1"
 	commonv1alpha1 "github.com/openapp-dev/openapp/pkg/apis/common/v1alpha1"
 	"github.com/openapp-dev/openapp/pkg/apis/service/v1alpha1"
 	"github.com/openapp-dev/openapp/pkg/controller/types"
@@ -32,7 +34,14 @@ func NewPublicServiceInstanceController(openappHelper *utils.OpenAPPHelper) type
 
 	openappHelper.PublicServiceInstanceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			pc.workqueue.Add(obj)
+			publicServiceIns, ok := obj.(*v1alpha1.PublicServiceInstance)
+			if !ok {
+				return
+			}
+			pc.workqueue.Add(pkgtypes.NamespacedName{
+				Namespace: utils.InstanceNamespace,
+				Name:      publicServiceIns.Name,
+			})
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldPublicServiceIns, ok := oldObj.(*v1alpha1.PublicServiceInstance)
@@ -43,13 +52,56 @@ func NewPublicServiceInstanceController(openappHelper *utils.OpenAPPHelper) type
 			if !ok {
 				return
 			}
-			if reflect.DeepEqual(oldPublicServiceIns.Spec, newPublicServiceIns.Spec) {
+			if newPublicServiceIns.DeletionTimestamp.IsZero() &&
+				reflect.DeepEqual(oldPublicServiceIns.Spec, newPublicServiceIns.Spec) {
 				return
 			}
-			pc.workqueue.Add(newObj)
+			pc.workqueue.Add(pkgtypes.NamespacedName{
+				Namespace: utils.InstanceNamespace,
+				Name:      newPublicServiceIns.Name,
+			})
 		},
 		DeleteFunc: func(obj interface{}) {
-			pc.workqueue.Add(obj)
+			publicServiceIns, ok := obj.(*v1alpha1.PublicServiceInstance)
+			if !ok {
+				return
+			}
+			pc.workqueue.Add(pkgtypes.NamespacedName{
+				Namespace: utils.InstanceNamespace,
+				Name:      publicServiceIns.Name,
+			})
+		},
+	})
+
+	openappHelper.AppInstanceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {},
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			oldAppIns, ok := oldObj.(*appv1alpha1.AppInstance)
+			if !ok {
+				return
+			}
+			newAppIns, ok := newObj.(*appv1alpha1.AppInstance)
+			if !ok {
+				return
+			}
+			if oldAppIns.Spec.PublicServiceClass == newAppIns.Spec.PublicServiceClass {
+				return
+			}
+
+			pc.workqueue.Add(pkgtypes.NamespacedName{
+				Namespace: utils.InstanceNamespace,
+				Name:      oldAppIns.Spec.PublicServiceClass,
+			})
+		},
+		DeleteFunc: func(obj interface{}) {
+			appIns, ok := obj.(*appv1alpha1.AppInstance)
+			if !ok {
+				return
+			}
+			pc.workqueue.Add(pkgtypes.NamespacedName{
+				Namespace: utils.InstanceNamespace,
+				Name:      appIns.Spec.PublicServiceClass,
+			})
 		},
 	})
 
@@ -60,20 +112,24 @@ func (pc *PublicServiceInstanceController) Start() {
 	go pc.workqueue.Run()
 }
 
-func (pc *PublicServiceInstanceController) Reconcile(obj interface{}) error {
-	publicServiceIns, ok := obj.(*v1alpha1.PublicServiceInstance)
-	if !ok {
-		klog.Errorf("Failed to convert obj to PublicServiceInstance")
+func (pc *PublicServiceInstanceController) Reconcile(resourceKey pkgtypes.NamespacedName) error {
+	klog.Infof("Reconciling publicservice instance(%s)...", resourceKey)
+	publicServiceIns, err := pc.openappClient.ServiceV1alpha1().PublicServiceInstances(resourceKey.Namespace).
+		Get(context.Background(), resourceKey.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		klog.Errorf("Failed to get publicservice instance(%s):%v", resourceKey, err)
 		return nil
 	}
 
-	klog.Infof("Reconciling publicservice instance(%s/%s)...", publicServiceIns.Namespace, publicServiceIns.Name)
 	if !publicServiceIns.DeletionTimestamp.IsZero() {
 		return pc.deletePublicServiceInstanceResources(publicServiceIns)
 	}
 
-	publicServiceIns.Finalizers = []string{utils.PublicServiceControllerFinalizerKey}
-	_, err := pc.openappClient.ServiceV1alpha1().PublicServiceInstances(publicServiceIns.Namespace).
+	publicServiceIns.Finalizers = []string{utils.PublicServiceInstanceControllerFinalizerKey}
+	publicServiceIns, err = pc.openappClient.ServiceV1alpha1().PublicServiceInstances(publicServiceIns.Namespace).
 		Update(context.Background(), publicServiceIns, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("Failed to update publicservice instance finalizers: %v", err)
@@ -153,8 +209,7 @@ func (pc *PublicServiceInstanceController) deletePublicServiceInstanceResources(
 			publicServiceIns.Status.Message = "APP instance is using this publicservice instance, cannot be deleted"
 			pc.openappClient.ServiceV1alpha1().PublicServiceInstances(publicServiceIns.Namespace).
 				UpdateStatus(context.Background(), publicServiceIns, metav1.UpdateOptions{})
-			return fmt.Errorf("app instance is using this publicservice instance(%s/%s), cannot be deleted",
-				publicServiceIns.Namespace, publicServiceIns.Name)
+			return nil
 		}
 	}
 

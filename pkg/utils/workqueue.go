@@ -1,10 +1,11 @@
 package utils
 
 import (
+	pkgtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 )
 
-type WorkItemHandler func(obj interface{}) error
+type WorkItemHandler func(pkgtypes.NamespacedName) error
 
 type WorkQueue struct {
 	queue   workqueue.RateLimitingInterface
@@ -18,7 +19,7 @@ func NewWorkQueue(handler WorkItemHandler) *WorkQueue {
 	}
 }
 
-func (w *WorkQueue) Add(item interface{}) {
+func (w *WorkQueue) Add(item pkgtypes.NamespacedName) {
 	w.queue.AddRateLimited(item)
 }
 
@@ -34,7 +35,8 @@ func (w *WorkQueue) process() bool {
 	}
 	defer w.queue.Done(obj)
 
-	if err := w.handler(obj); err != nil {
+	namespaceNameKey := obj.(pkgtypes.NamespacedName)
+	if err := w.handler(namespaceNameKey); err != nil {
 		w.queue.AddRateLimited(obj)
 		return true
 	}

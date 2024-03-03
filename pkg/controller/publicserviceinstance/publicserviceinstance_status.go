@@ -6,6 +6,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
@@ -27,6 +28,17 @@ func NewPublicServiceInstanceStatusController(openappHelper *utils.OpenAPPHelper
 	pc.openappClient = openappHelper.OpenAPPClient
 	pc.k8sClient = openappHelper.K8sClient
 
+	handlefunc := func(obj interface{}) {
+		sts, ok := obj.(*v1.StatefulSet)
+		if !ok {
+			return
+		}
+		pc.workqueue.Add(pkgtypes.NamespacedName{
+			Namespace: utils.InstanceNamespace,
+			Name:      sts.Name,
+		})
+	}
+
 	openappHelper.StatefulSetInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			sts, ok := obj.(*v1.StatefulSet)
@@ -46,13 +58,13 @@ func NewPublicServiceInstanceStatusController(openappHelper *utils.OpenAPPHelper
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				pc.workqueue.Add(obj)
+				handlefunc(obj)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				pc.workqueue.Add(newObj)
+				handlefunc(newObj)
 			},
 			DeleteFunc: func(obj interface{}) {
-				pc.workqueue.Add(obj)
+				handlefunc(obj)
 			},
 		},
 	})
@@ -64,13 +76,18 @@ func (pc *PublicServiceInstanceStatusController) Start() {
 	go pc.workqueue.Run()
 }
 
-func (pc *PublicServiceInstanceStatusController) Reconcile(obj interface{}) error {
-	sts, ok := obj.(*v1.StatefulSet)
-	if !ok {
-		return nil
+func (pc *PublicServiceInstanceStatusController) Reconcile(resourceKey pkgtypes.NamespacedName) error {
+	klog.Infof("Reconciling publicservice instance(%s) status...", resourceKey)
+	sts, err := pc.k8sClient.AppsV1().StatefulSets(resourceKey.Namespace).
+		Get(context.Background(), resourceKey.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		klog.Errorf("Failed to get statefulset(%s): %v", resourceKey, err)
+		return err
 	}
 
-	klog.Infof("Reconciling publicservice instance(%s/%s) status...", sts.Namespace, sts.Name)
 	ready := false
 	if sts.Status.ReadyReplicas > 0 {
 		ready = true

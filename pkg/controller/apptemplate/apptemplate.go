@@ -7,6 +7,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
@@ -29,18 +30,21 @@ func NewAppTempalteController(openappHelper *utils.OpenAPPHelper) types.Controll
 
 	openappHelper.ConfigMapInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
-			cm := obj.(*v1.ConfigMap)
+			cm, ok := obj.(*v1.ConfigMap)
+			if !ok {
+				return false
+			}
 			if cm.Name != utils.SystemConfigMap || cm.Namespace != utils.SystemNamespace {
 				return false
 			}
 			return true
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				ac.workqueue.Add(obj)
+			AddFunc: func(_ interface{}) {
+				ac.workqueue.Add(pkgtypes.NamespacedName{})
 			},
-			UpdateFunc: func(oldObj, newObj interface{}) {
-				ac.workqueue.Add(newObj)
+			UpdateFunc: func(_, _ interface{}) {
+				ac.workqueue.Add(pkgtypes.NamespacedName{})
 			},
 		},
 	})
@@ -52,9 +56,8 @@ func (ac *AppTemplateController) Start() {
 	go ac.workqueue.Run()
 }
 
-func (ac *AppTemplateController) Reconcile(_ interface{}) error {
+func (ac *AppTemplateController) Reconcile(_ pkgtypes.NamespacedName) error {
 	klog.Infof("Reconciling app template...")
-
 	registries := utils.GetRegistryPaths()
 	for _, registry := range registries {
 		templates := utils.GetAppTemplatePath(registry)

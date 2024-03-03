@@ -6,6 +6,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
@@ -27,6 +28,17 @@ func NewAppInstanceStatusController(openappHelper *utils.OpenAPPHelper) types.Co
 	ac.openappClient = openappHelper.OpenAPPClient
 	ac.k8sClient = openappHelper.K8sClient
 
+	handlefunc := func(obj interface{}) {
+		sts, ok := obj.(*v1.StatefulSet)
+		if !ok {
+			return
+		}
+		ac.workqueue.Add(pkgtypes.NamespacedName{
+			Namespace: utils.InstanceNamespace,
+			Name:      sts.Name,
+		})
+	}
+
 	openappHelper.StatefulSetInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			sts, ok := obj.(*v1.StatefulSet)
@@ -46,13 +58,13 @@ func NewAppInstanceStatusController(openappHelper *utils.OpenAPPHelper) types.Co
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				ac.workqueue.Add(obj)
+				handlefunc(obj)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				ac.workqueue.Add(newObj)
+				handlefunc(newObj)
 			},
 			DeleteFunc: func(obj interface{}) {
-				ac.workqueue.Add(obj)
+				handlefunc(obj)
 			},
 		},
 	})
@@ -64,14 +76,18 @@ func (ac *AppInstanceStatusController) Start() {
 	go ac.workqueue.Run()
 }
 
-func (ac *AppInstanceStatusController) Reconcile(obj interface{}) error {
-	sts, ok := obj.(*v1.StatefulSet)
-	if !ok {
-		klog.Errorf("Failed to convert obj to StatefulSet")
-		return nil
+func (ac *AppInstanceStatusController) Reconcile(resourceKey pkgtypes.NamespacedName) error {
+	klog.Infof("Reconciling app instance status with statefulset(%s)...", resourceKey)
+	sts, err := ac.k8sClient.AppsV1().StatefulSets(resourceKey.Namespace).Get(context.Background(),
+		resourceKey.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		klog.Errorf("Failed to get statefulset: %v", err)
+		return err
 	}
 
-	klog.Infof("Reconciling app instance status with statefulset(%s/%s)...", sts.Namespace, sts.Name)
 	ready := false
 	if sts.Status.ReadyReplicas > 0 {
 		ready = true

@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
@@ -28,6 +29,17 @@ func NewPublicServiceInstanceServiceController(openappHandler *utils.OpenAPPHelp
 	pc.k8sClient = openappHandler.K8sClient
 	pc.openappClient = openappHandler.OpenAPPClient
 
+	handlefunc := func(obj interface{}) {
+		svc, ok := obj.(*corev1.Service)
+		if !ok {
+			return
+		}
+		pc.workqueue.Add(pkgtypes.NamespacedName{
+			Namespace: utils.InstanceNamespace,
+			Name:      svc.Name,
+		})
+	}
+
 	openappHandler.ServiceInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			svc, ok := obj.(*corev1.Service)
@@ -40,9 +52,6 @@ func NewPublicServiceInstanceServiceController(openappHandler *utils.OpenAPPHelp
 			if svc.Labels == nil {
 				return false
 			}
-			if svc.Labels == nil {
-				return false
-			}
 			if _, ok := svc.Labels[utils.PublicServiceInstanceLabelKey]; !ok {
 				return false
 			}
@@ -50,13 +59,13 @@ func NewPublicServiceInstanceServiceController(openappHandler *utils.OpenAPPHelp
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				pc.workqueue.Add(obj)
+				handlefunc(obj)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				pc.workqueue.Add(newObj)
+				handlefunc(newObj)
 			},
 			DeleteFunc: func(obj interface{}) {
-				pc.workqueue.Add(obj)
+				handlefunc(obj)
 			},
 		},
 	})
@@ -68,16 +77,10 @@ func (pc *PublicServiceInstanceServiceController) Start() {
 	go pc.workqueue.Run()
 }
 
-func (pc *PublicServiceInstanceServiceController) Reconcile(obj interface{}) error {
-	svc, ok := obj.(*corev1.Service)
-	if !ok {
-		klog.Errorf("Failed to convert object to service")
-		return nil
-	}
-
-	klog.Infof("Reconciling publicservice  with service(%s/%s)...", svc.Namespace, svc.Name)
-	_, err := pc.k8sClient.CoreV1().Services(svc.Namespace).
-		Get(context.Background(), svc.Name, metav1.GetOptions{})
+func (pc *PublicServiceInstanceServiceController) Reconcile(resourceKey pkgtypes.NamespacedName) error {
+	klog.Infof("Reconciling publicservice with service(%s)...", resourceKey)
+	svc, err := pc.k8sClient.CoreV1().Services(resourceKey.Namespace).
+		Get(context.Background(), resourceKey.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return pc.updatePublicServiceInstanceServiceURL(svc, "")

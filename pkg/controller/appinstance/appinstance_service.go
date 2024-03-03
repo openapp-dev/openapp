@@ -7,6 +7,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
@@ -29,6 +30,17 @@ func NewAppInstanceServiceController(openappHelper *utils.OpenAPPHelper) types.C
 	sc.k8sClient = openappHelper.K8sClient
 	sc.openappClient = openappHelper.OpenAPPClient
 
+	handlefunc := func(obj interface{}) {
+		svc, ok := obj.(*corev1.Service)
+		if !ok {
+			return
+		}
+		sc.workqueue.Add(pkgtypes.NamespacedName{
+			Namespace: utils.InstanceNamespace,
+			Name:      svc.Name,
+		})
+	}
+
 	openappHelper.ServiceInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			svc, ok := obj.(*corev1.Service)
@@ -48,13 +60,13 @@ func NewAppInstanceServiceController(openappHelper *utils.OpenAPPHelper) types.C
 		},
 		Handler: cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
-				sc.workqueue.Add(obj)
+				handlefunc(obj)
 			},
 			UpdateFunc: func(oldObj, newObj interface{}) {
-				sc.workqueue.Add(newObj)
+				handlefunc(newObj)
 			},
 			DeleteFunc: func(obj interface{}) {
-				sc.workqueue.Add(obj)
+				handlefunc(obj)
 			},
 		},
 	})
@@ -66,16 +78,10 @@ func (ac *AppInstanceServiceController) Start() {
 	go ac.workqueue.Run()
 }
 
-func (sc *AppInstanceServiceController) Reconcile(obj interface{}) error {
-	svc, ok := obj.(*corev1.Service)
-	if !ok {
-		klog.Errorf("Failed to convert object to service")
-		return nil
-	}
-
-	klog.Infof("Reconciling app instance service status with service(%s/%s)...", svc.Namespace, svc.Name)
-	_, err := sc.k8sClient.CoreV1().Services(svc.Namespace).
-		Get(context.Background(), svc.Name, metav1.GetOptions{})
+func (sc *AppInstanceServiceController) Reconcile(resourceKey pkgtypes.NamespacedName) error {
+	klog.Infof("Reconciling app instance service status with service(%s)...", resourceKey)
+	svc, err := sc.k8sClient.CoreV1().Services(resourceKey.Namespace).
+		Get(context.Background(), resourceKey.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return sc.updateAppInstanceServiceURL(svc, "", "")

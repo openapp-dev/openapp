@@ -33,7 +33,8 @@ const (
 
 	OpenAPPDNSName = "openapp"
 
-	PublicServiceControllerFinalizerKey = "publicservice-controller"
+	PublicServiceInstanceControllerFinalizerKey = "publicservice-instance-controller"
+	AppInstanceControllerFinalizerKey           = "app-instance-controller"
 )
 
 var (

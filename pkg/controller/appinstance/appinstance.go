@@ -7,6 +7,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	pkgtypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
@@ -32,7 +33,14 @@ func NewAppInstanceController(openappHelper *utils.OpenAPPHelper) types.Controll
 
 	openappHelper.AppInstanceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			ac.workqueue.Add(obj)
+			ins, ok := obj.(*appv1alpha1.AppInstance)
+			if !ok {
+				return
+			}
+			ac.workqueue.Add(pkgtypes.NamespacedName{
+				Namespace: utils.InstanceNamespace,
+				Name:      ins.Name,
+			})
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldAppIns, ok := oldObj.(*appv1alpha1.AppInstance)
@@ -43,13 +51,24 @@ func NewAppInstanceController(openappHelper *utils.OpenAPPHelper) types.Controll
 			if !ok {
 				return
 			}
-			if reflect.DeepEqual(oldAppIns.Spec, newAppIns.Spec) {
+			if newAppIns.DeletionTimestamp.IsZero() &&
+				reflect.DeepEqual(oldAppIns.Spec, newAppIns.Spec) {
 				return
 			}
-			ac.workqueue.Add(newObj)
+			ac.workqueue.Add(pkgtypes.NamespacedName{
+				Namespace: utils.InstanceNamespace,
+				Name:      newAppIns.Name,
+			})
 		},
 		DeleteFunc: func(obj interface{}) {
-			ac.workqueue.Add(obj)
+			ins, ok := obj.(*appv1alpha1.AppInstance)
+			if !ok {
+				return
+			}
+			ac.workqueue.Add(pkgtypes.NamespacedName{
+				Namespace: utils.InstanceNamespace,
+				Name:      ins.Name,
+			})
 		},
 	})
 
@@ -60,37 +79,46 @@ func (ac *AppInstanceController) Start() {
 	go ac.workqueue.Run()
 }
 
-func (ac *AppInstanceController) Reconcile(obj interface{}) error {
-	appInstance, ok := obj.(*appv1alpha1.AppInstance)
-	if !ok {
-		klog.Errorf("Failed to convert obj to AppInstance")
-		return nil
+func (ac *AppInstanceController) Reconcile(resourceKey pkgtypes.NamespacedName) error {
+	klog.Infof("Reconciling app instance(%s)...", resourceKey)
+	appIns, err := ac.openappClient.AppV1alpha1().AppInstances(resourceKey.Namespace).
+		Get(context.Background(), resourceKey.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		klog.Errorf("Failed to get app instance: %v", err)
+		return err
 	}
 
-	klog.Infof("Reconciling app instance(%s/%s)...", appInstance.Namespace, appInstance.Name)
-	appInsExists, err := ac.openappClient.AppV1alpha1().AppInstances(appInstance.Namespace).
-		Get(context.Background(), appInstance.Name, metav1.GetOptions{})
-	if err != nil && apierrors.IsNotFound(err) {
-		return ac.deleteAppInstanceResources(appInstance)
+	if !appIns.DeletionTimestamp.IsZero() {
+		return ac.deleteAppInstanceResources(appIns)
 	}
 
-	appTemplate := appInstance.Spec.AppTemplate
+	appIns.Finalizers = []string{utils.AppInstanceControllerFinalizerKey}
+	appIns, err = ac.openappClient.AppV1alpha1().AppInstances(appIns.Namespace).
+		Update(context.Background(), appIns, metav1.UpdateOptions{})
+	if err != nil {
+		klog.Errorf("Failed to update app instance: %v", err)
+		return err
+	}
+
+	appTemplate := appIns.Spec.AppTemplate
 	if appTemplate == "" {
-		klog.Errorf("AppTemplate is empty in AppInstance(%s/%s)", appInstance.Namespace, appInstance.Name)
+		klog.Errorf("AppTemplate is empty in AppInstance(%s/%s)", appIns.Namespace, appIns.Name)
 		return nil
 	}
-
 	derivedResoruce := []commonv1alpha1.DerivedResource{}
 	manifests := utils.FindAppTemplateResources(appTemplate)
 	// The last element is statefulset, we should recreate it
 	for _, manifest := range manifests {
-		if err := ac.handleAppInstanceDerivedResourceCreation(appInstance, manifest, &derivedResoruce); err != nil {
+		if err := ac.handleAppInstanceDerivedResourceCreation(appIns, manifest, &derivedResoruce); err != nil {
 			return err
 		}
 	}
-	appInsExists.Status.DerivedResources = derivedResoruce
-	_, err = ac.openappClient.AppV1alpha1().AppInstances(appInstance.Namespace).
-		UpdateStatus(context.Background(), appInsExists, metav1.UpdateOptions{})
+	appIns.Status.DerivedResources = derivedResoruce
+	_, err = ac.openappClient.AppV1alpha1().AppInstances(appIns.Namespace).
+		UpdateStatus(context.Background(), appIns, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("Failed to update app instance status: %v", err)
 		return err
@@ -157,6 +185,15 @@ func (ac *AppInstanceController) deleteAppInstanceResources(appInstance *appv1al
 			}
 		}
 	}
+
+	appInstance.Finalizers = nil
+	_, err := ac.openappClient.AppV1alpha1().AppInstances(appInstance.Namespace).
+		Update(context.Background(), appInstance, metav1.UpdateOptions{})
+	if err != nil {
+		klog.Errorf("Failed to remove app instance finalizers: %v", err)
+		return err
+	}
+
 	return nil
 }
 
