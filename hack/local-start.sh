@@ -2,6 +2,10 @@
 
 set -e
 
+K3S_LOG_PATH=${K3S_LOG_PATH:-/var/log/k3s.log}
+K3S_KUBECONFIG_OUTPUT=${K3S_KUBECONFIG_OUTPUT:-/etc/rancher/k3s/config.yaml}
+K3S_KUBECONFIG_MODE=644
+
 # 1.Verify env
 if [[ -z ${KO_DOCKER_REPO} ]]; then
     echo "KO_DOCKER_REPO is not set. Please set it to the docker repository where you want to store the image."
@@ -40,14 +44,14 @@ fi
 
 # 6.Launch k3s and disable LoadBalancer
 k3s-killall.sh
-nohup k3s server --disable traefik,servicelb > /var/log/k3s.log &
+nohup k3s server --disable traefik,servicelb --disable-agent > ${K3S_LOG_PATH} &
 sleep 30
 
 # 7. Deploy openapp
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+export KUBECONFIG=${K3S_KUBECONFIG_OUTPUT}
 ko apply -Rf config
 
 # 8. Echo related information
 echo "Please run following command to control openapp:"
-echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml"
+echo "export KUBECONFIG=${K3S_KUBECONFIG_OUTPUT}"
 echo "kubectl get apptemplate -A"
