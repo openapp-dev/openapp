@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-function create_gopath_tree() {
+function utils::create_gopath_tree() {
   # $1: the root path of repo
   local repo_root=$1
   # $2: go path
@@ -16,4 +16,8 @@ function create_gopath_tree() {
   if [[ ! -e "${go_pkg_dir}" || "$(readlink "${go_pkg_dir}")" != "${repo_root}" ]]; then
     ln -snf "${repo_root}" "${go_pkg_dir}"
   fi
+}
+
+function utils::echo_note() {
+  echo -e "\033[33m$1\033[0m"
 }
