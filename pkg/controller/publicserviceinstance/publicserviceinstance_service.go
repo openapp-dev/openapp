@@ -40,7 +40,7 @@ func NewPublicServiceInstanceServiceController(openappHandler *utils.OpenAPPHelp
 		})
 	}
 
-	openappHandler.ServiceInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+	_, _ = openappHandler.ServiceInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			svc, ok := obj.(*corev1.Service)
 			if !ok {

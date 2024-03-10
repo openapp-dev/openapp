@@ -28,7 +28,7 @@ func NewPublicServiceTemplateController(openappHelper *utils.OpenAPPHelper) type
 	pc.workqueue = utils.NewWorkQueue(pc.Reconcile)
 	pc.openappClient = openappHelper.OpenAPPClient
 
-	openappHelper.ConfigMapInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+	_, _ = openappHelper.ConfigMapInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			cm := obj.(*v1.ConfigMap)
 			if cm.Name != utils.SystemConfigMap || cm.Namespace != utils.SystemNamespace {
