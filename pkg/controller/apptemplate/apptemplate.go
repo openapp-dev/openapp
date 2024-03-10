@@ -28,7 +28,7 @@ func NewAppTempalteController(openappHelper *utils.OpenAPPHelper) types.Controll
 	ac.workqueue = utils.NewWorkQueue(ac.Reconcile)
 	ac.openappClient = openappHelper.OpenAPPClient
 
-	openappHelper.ConfigMapInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+	_, _ = openappHelper.ConfigMapInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			cm, ok := obj.(*v1.ConfigMap)
 			if !ok {

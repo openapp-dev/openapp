@@ -41,7 +41,7 @@ func NewAppInstanceServiceController(openappHelper *utils.OpenAPPHelper) types.C
 		})
 	}
 
-	openappHelper.ServiceInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+	_, _ = openappHelper.ServiceInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			svc, ok := obj.(*corev1.Service)
 			if !ok {

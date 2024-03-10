@@ -1,9 +1,8 @@
 name: OpenAPP style check
 
 on:
-  # pull_request:
-  #   branches: [ "main", "release-*" ]
-  workflow_dispatch: {}
+  pull_request:
+    branches: [ "main", "release-*" ]
 
 permissions:
   contents: read
@@ -14,21 +13,26 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
       - uses: actions/setup-go@v5
         with:
           go-version: '1.21'
           cache: false
 
-      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
-          submodules: true
+          go-version: '1.21'
+          cache: false
 
-      - name: Check files
+      - name: Set up env
         run: |
-          ls -alh
-          pwd
+          go mod tidy
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v4
         with:
-          working-directory: /home/runner/work/openapp/openapp
+          version: v1.54
+          args: --timeout=5m

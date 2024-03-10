@@ -32,7 +32,7 @@ func NewPublicServiceInstanceController(openappHelper *utils.OpenAPPHelper) type
 	pc.openappClient = openappHelper.OpenAPPClient
 	pc.k8sClient = openappHelper.K8sClient
 
-	openappHelper.PublicServiceInstanceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = openappHelper.PublicServiceInstanceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			publicServiceIns, ok := obj.(*v1alpha1.PublicServiceInstance)
 			if !ok {
@@ -73,7 +73,7 @@ func NewPublicServiceInstanceController(openappHelper *utils.OpenAPPHelper) type
 		},
 	})
 
-	openappHelper.AppInstanceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = openappHelper.AppInstanceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			oldAppIns, ok := oldObj.(*appv1alpha1.AppInstance)
@@ -207,8 +207,13 @@ func (pc *PublicServiceInstanceController) deletePublicServiceInstanceResources(
 	for _, ins := range appIns.Items {
 		if ins.Spec.PublicServiceClass == publicServiceIns.Name {
 			publicServiceIns.Status.Message = "APP instance is using this publicservice instance, cannot be deleted"
-			pc.openappClient.ServiceV1alpha1().PublicServiceInstances(publicServiceIns.Namespace).
+			_, err = pc.openappClient.ServiceV1alpha1().PublicServiceInstances(publicServiceIns.Namespace).
 				UpdateStatus(context.Background(), publicServiceIns, metav1.UpdateOptions{})
+			if err != nil {
+				klog.Errorf("Failed to update publicservice instance(%s/%s) status: %v",
+					publicServiceIns.Namespace, publicServiceIns.Name, err)
+				return err
+			}
 			return nil
 		}
 	}

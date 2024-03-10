@@ -32,7 +32,7 @@ func NewRegistryController(openappHelper *utils.OpenAPPHelper) types.ControllerI
 	}
 	rc.workqueue = utils.NewWorkQueue(rc.Reconcile)
 	rc.k8sClient = openappHelper.K8sClient
-	openappHelper.ConfigMapInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+	_, _ = openappHelper.ConfigMapInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			cm := obj.(*v1.ConfigMap)
 			if cm.Name != utils.SystemConfigMap || cm.Namespace != utils.SystemNamespace {

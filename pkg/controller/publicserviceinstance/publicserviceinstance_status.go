@@ -39,7 +39,7 @@ func NewPublicServiceInstanceStatusController(openappHelper *utils.OpenAPPHelper
 		})
 	}
 
-	openappHelper.StatefulSetInformer.AddEventHandler(cache.FilteringResourceEventHandler{
+	_, _ = openappHelper.StatefulSetInformer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: func(obj interface{}) bool {
 			sts, ok := obj.(*v1.StatefulSet)
 			if !ok {

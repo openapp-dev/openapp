@@ -31,7 +31,7 @@ func NewAppInstanceController(openappHelper *utils.OpenAPPHelper) types.Controll
 	ac.openappClient = openappHelper.OpenAPPClient
 	ac.k8sClient = openappHelper.K8sClient
 
-	openappHelper.AppInstanceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = openappHelper.AppInstanceInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			ins, ok := obj.(*appv1alpha1.AppInstance)
 			if !ok {
