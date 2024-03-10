@@ -1,0 +1,52 @@
+name: OpenAPP deploy test
+
+on:
+  pull_request:
+    branches: [ 'main', 'release-*' ]
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: true
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set Up QEMU
+      uses: docker/setup-qemu-action@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Set up a local registry
+      run: |
+        set -x
+
+        docker run -d -p 5000:5000 --name registry registry:2.7
+
+    - name: Deploy test
+      run: |
+        set -x
+
+        hack/local-start.sh
+
+        export KUBECONFIG=${HOME}/.config/k3s.yaml
+        kubectl wait --for=condition=Ready pod -nopenapp-system --timeout=5m -l app=openapp-controller
+        # sleep 60 seconds to wait the openapp repository to be ready
+        sleep 60
+
+    - name: Test app/publicservice template initialization
+      run: |
+        set -x
+
+        export KUBECONFIG=${HOME}/.config/k3s.yaml
+        kubectl get publicservicetemplates -A
+        kubectl get apptemplates -A
+
+    - name: Log out failure
+      if: ${{ failure() }}
+      run: |
+        export KUBECONFIG=${HOME}/.config/k3s.yaml
+        kubectl get po -A
+        kubectl describe pod -nopenapp-system

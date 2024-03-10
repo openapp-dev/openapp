@@ -22,7 +22,7 @@ trap "cleanup" EXIT SIGINT
 cleanup
 
 source "${REPO_ROOT}"/hack/utils.sh
-create_gopath_tree "${REPO_ROOT}" "${go_path}"
+utils::create_gopath_tree "${REPO_ROOT}" "${go_path}"
 export GOPATH="${go_path}"
 
 echo "Generating with deepcopy-gen"
