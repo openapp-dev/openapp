@@ -42,22 +42,27 @@ PROXY_ENV=""
 if [[ -n ${https_proxy} ]]; then
     PROXY_ENV="-e HTTP_PROXY=${http_proxy} -e HTTPS_PROXY=${https_proxy} -e NO_PROXY=${no_proxy}"
 fi
-docker run -itd --network host \
-    --privileged \
-    ${PROXY_ENV} \
-    -v ${HOME}/openapp:/root/openapp \
-    --name k3s rancher/k3s:v1.27.4-k3s1 server --disable traefik,servicelb
-sleep 30
+# check whether k3s container exist
+if [[ -z $(docker ps -a --filter name=k3s -q) ]]; then
+    docker run -itd --network host \
+        --privileged \
+        ${PROXY_ENV} \
+        -v ${HOME}/openapp:/root/openapp \
+        --name k3s rancher/k3s:v1.27.4-k3s1 server --disable traefik,servicelb
 
-# 6. Copy cluster config out
-mkdir -p ${HOME}/.config/
-docker cp k3s:/etc/rancher/k3s/k3s.yaml ${HOME}/.config/k3s.yaml
+    # Give some time to let the k3s cluster initialize
+    sleep 30
 
-# 7. Deploy openapp
+    mkdir -p ${HOME}/.config/
+    docker cp k3s:/etc/rancher/k3s/k3s.yaml ${HOME}/.config/k3s.yaml
+fi
+
+
+# 6.Deploy openapp
 export KUBECONFIG=${HOME}/.config/k3s.yaml
 ko apply -Rf config
 
-# 8. Echo related information
+# 7.Echo related information
 echo "Please run following command to control openapp:"
 utils::echo_note "export KUBECONFIG=${HOME}/.config/k3s.yaml"
 utils::echo_note "kubectl get apptemplate -A"

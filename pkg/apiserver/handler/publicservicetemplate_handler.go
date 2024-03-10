@@ -13,18 +13,18 @@ func ListAllPublicServiceTemplatesHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
 	publicServiceTemps, err := openappHelper.PublicServiceTemplateLister.List(labels.Everything())
 	if err != nil {
 		klog.Errorf("Failed to list publicservice templates: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list publicservice templates"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to list publicservice templates", nil)
 		return
 	}
 
-	ctx.AsciiJSON(http.StatusOK, publicServiceTemps)
+	returnFormattedData(ctx, http.StatusOK, "List publicservice templates successfully", publicServiceTemps)
 }
 
 func GetPublicServiceTemplateHandler(ctx *gin.Context) {
@@ -32,7 +32,7 @@ func GetPublicServiceTemplateHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
@@ -40,9 +40,9 @@ func GetPublicServiceTemplateHandler(ctx *gin.Context) {
 	publicServiceTemp, err := openappHelper.PublicServiceTemplateLister.Get(tempName)
 	if err != nil {
 		klog.Errorf("Failed to get publicservice template: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get publicservice template"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get publicservice template", nil)
 		return
 	}
 
-	ctx.AsciiJSON(http.StatusOK, publicServiceTemp)
+	returnFormattedData(ctx, http.StatusOK, "Get publicservice template successfully", publicServiceTemp)
 }
