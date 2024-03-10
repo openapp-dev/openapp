@@ -20,18 +20,18 @@ func ListAllPublicServiceInstancesHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
 	publicServiceIns, err := openappHelper.PublicServiceInstanceLister.List(labels.Everything())
 	if err != nil {
 		klog.Errorf("Failed to list public service instances: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list public service instances"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to list public service instances", nil)
 		return
 	}
 
-	ctx.AsciiJSON(http.StatusOK, publicServiceIns)
+	returnFormattedData(ctx, http.StatusOK, "List public service instances successfully", publicServiceIns)
 }
 
 func GetPublicServiceInstanceHandler(ctx *gin.Context) {
@@ -39,7 +39,7 @@ func GetPublicServiceInstanceHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
@@ -48,11 +48,11 @@ func GetPublicServiceInstanceHandler(ctx *gin.Context) {
 		Get(insName)
 	if err != nil {
 		klog.Errorf("Failed to get publicservice instance:%v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get publicservice instance"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get publicservice instance", nil)
 		return
 	}
 
-	ctx.AsciiJSON(http.StatusOK, ins)
+	returnFormattedData(ctx, http.StatusOK, "Get publicservice instance successfully", ins)
 }
 
 func DeletePublicServiceInstanceHandler(ctx *gin.Context) {
@@ -60,7 +60,7 @@ func DeletePublicServiceInstanceHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
@@ -69,11 +69,11 @@ func DeletePublicServiceInstanceHandler(ctx *gin.Context) {
 		Delete(context.Background(), insName, metav1.DeleteOptions{})
 	if err != nil {
 		klog.Errorf("Failed to delete public service instance: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete public service instance"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to delete public service instance", nil)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"success": "success"})
+	returnFormattedData(ctx, http.StatusOK, "Delete public service instance successfully", nil)
 }
 
 func CreateOrUpdatePublicServiceInstanceHandler(ctx *gin.Context) {
@@ -81,21 +81,21 @@ func CreateOrUpdatePublicServiceInstanceHandler(ctx *gin.Context) {
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
 		klog.Errorf("Failed to read request body: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read request body"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to read request body", nil)
 		return
 	}
 
 	var ins servicev1alpha1.PublicServiceInstance
 	if err := json.Unmarshal(body, &ins); err != nil {
 		klog.Errorf("Failed to unmarshal request body: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unmarshal request body"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to unmarshal request body", nil)
 		return
 	}
 
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
@@ -103,9 +103,9 @@ func CreateOrUpdatePublicServiceInstanceHandler(ctx *gin.Context) {
 		Create(context.Background(), &ins, metav1.CreateOptions{})
 	if err != nil {
 		klog.Errorf("Failed to create public service instance: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create public service instance"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to create public service instance", nil)
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"success": "success"})
+	returnFormattedData(ctx, http.StatusOK, "Create public service instance successfully", nil)
 }

@@ -20,18 +20,18 @@ func ListAllAppInstancesHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
 	appIns, err := openappHelper.AppInstanceLister.List(labels.Everything())
 	if err != nil {
 		klog.Errorf("Failed to list app instances: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list app instances"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to list app instances", nil)
 		return
 	}
 
-	ctx.AsciiJSON(http.StatusOK, appIns)
+	returnFormattedData(ctx, http.StatusOK, "List app instances successfully", appIns)
 }
 
 func GetAppInstanceHandler(ctx *gin.Context) {

@@ -25,14 +25,14 @@ func GetConfigHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
 	cfg, err := openappHelper.ConfigMapLister.ConfigMaps(utils.SystemNamespace).Get(utils.SystemConfigMap)
 	if err != nil {
 		klog.Errorf("Failed to get config: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get config"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get config", nil)
 		return
 	}
 
@@ -40,7 +40,7 @@ func GetConfigHandler(ctx *gin.Context) {
 	resp.Registry = cfg.Data["registry"]
 	resp.UserName = cfg.Data["userName"]
 	resp.Password = cfg.Data["password"]
-	ctx.AsciiJSON(http.StatusOK, resp)
+	returnFormattedData(ctx, http.StatusOK, "Get config successfully", resp)
 }
 
 func UpdateConfigHandler(ctx *gin.Context) {
@@ -48,13 +48,13 @@ func UpdateConfigHandler(ctx *gin.Context) {
 	body, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
 		klog.Errorf("Failed to read request body: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read request body"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to read request body", nil)
 		return
 	}
 	config := &OpenAPPSystemConfig{}
 	if err := json.Unmarshal(body, config); err != nil {
 		klog.Errorf("Failed to unmarshal request body: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to unmarshal request body"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to unmarshal request body", nil)
 		return
 	}
 
@@ -78,10 +78,11 @@ func UpdateConfigHandler(ctx *gin.Context) {
 	if _, err := openappHelper.K8sClient.CoreV1().ConfigMaps(utils.SystemNamespace).Update(context.TODO(),
 		updatedCfg, metav1.UpdateOptions{}); err != nil {
 		klog.Errorf("Failed to update config: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update config"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to update config", nil)
 		return
 	}
-	ctx.JSON(http.StatusOK, gin.H{"message": "Config updated successfully"})
+
+	returnFormattedData(ctx, http.StatusOK, "Config updated successfully", nil)
 }
 
 func getOpenAPPHelper(ctx *gin.Context) (*utils.OpenAPPHelper, error) {

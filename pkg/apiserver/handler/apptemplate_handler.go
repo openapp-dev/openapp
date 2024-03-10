@@ -13,18 +13,18 @@ func ListAllAppTemplatesHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
 	appTemps, err := openappHelper.AppTemplateLister.List(labels.Everything())
 	if err != nil {
 		klog.Errorf("Failed to list app templates: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list app templates"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to list app templates", nil)
 		return
 	}
 
-	ctx.AsciiJSON(http.StatusOK, appTemps)
+	returnFormattedData(ctx, http.StatusOK, "List app templates successfully", appTemps)
 }
 
 func GetAppTemplateHandler(ctx *gin.Context) {
@@ -32,7 +32,7 @@ func GetAppTemplateHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
@@ -40,9 +40,9 @@ func GetAppTemplateHandler(ctx *gin.Context) {
 	appTemp, err := openappHelper.AppTemplateLister.Get(tempName)
 	if err != nil {
 		klog.Errorf("Failed to get app template: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get app template"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get app template", nil)
 		return
 	}
 
-	ctx.AsciiJSON(http.StatusOK, appTemp)
+	returnFormattedData(ctx, http.StatusOK, "Get app template successfully", appTemp)
 }
