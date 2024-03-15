@@ -8,6 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/openapp-dev/openapp/pkg/utils"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog"
@@ -108,4 +109,62 @@ func CreateOrUpdatePublicServiceInstanceHandler(ctx *gin.Context) {
 	}
 
 	returnFormattedData(ctx, http.StatusOK, "Create public service instance successfully", nil)
+}
+
+func PublicServiceInstanceLoggingHandler(ctx *gin.Context) {
+	klog.V(4).Infof("Start to log public service instance...")
+	openappHelper, err := getOpenAPPHelper(ctx)
+	if err != nil {
+		klog.Errorf("Failed to get openapp lister: %v", err)
+		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	insName := ctx.Param("instanceName")
+	pods, err := openappHelper.K8sClient.CoreV1().Pods(utils.InstanceNamespace).List(context.Background(), metav1.ListOptions{
+		LabelSelector: "publicservice=" + insName,
+	})
+	if err != nil {
+		klog.Errorf("Failed to get public service instance's pod: %v", err)
+		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+
+	if len(pods.Items) == 0 || len(pods.Items) > 1 {
+		klog.Warningf("No resource found for public service instance(%s)", insName)
+		returnFormattedData(ctx, http.StatusNotFound, "No resource found for public service instance", nil)
+		return
+	}
+
+	// TBD: Maybe we can let user choose
+	req := openappHelper.K8sClient.CoreV1().Pods(utils.InstanceNamespace).GetLogs(pods.Items[0].Name, &v1.PodLogOptions{
+		Container: pods.Items[0].Spec.Containers[0].Name,
+	})
+	podLogs, err := req.Stream(context.Background())
+	if err != nil {
+		klog.Errorf("Failed to get public service instance's pod logs: %v", err)
+		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		return
+	}
+	defer podLogs.Close()
+
+	streamUsed := ctx.Query("stream") == "true"
+	if streamUsed {
+		ctx.Stream(func(w io.Writer) bool {
+			_, err := io.Copy(w, podLogs)
+			if err != nil {
+				klog.Errorf("Error streaming logs: %v", err)
+				return false
+			}
+			return true
+		})
+	} else {
+		logs, err := io.ReadAll(podLogs)
+		if err != nil {
+			klog.Errorf("Error reading logs: %v", err)
+			returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+			return
+		}
+		ctx.String(http.StatusOK, string(logs))
+	}
 }
