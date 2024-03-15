@@ -41,13 +41,13 @@ func NewOpenAPPServerRouter(k8sClient kubernetes.Interface,
 
 func initAPPRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
 	appGroup := router.Group("/api/v1/apps")
+	appGroup.GET("/templates", handler.ListAllAppTemplatesHandler)
+	appGroup.GET("/templates/:templateName", handler.GetAppTemplateHandler)
+
 	appGroup.GET("/instances", handler.ListAllAppInstancesHandler)
 	appGroup.GET("/instances/:instanceName", handler.GetAppInstanceHandler)
 	appGroup.POST("/instances/:instanceName", handler.CreateOrUpdateAppInstanceHandler)
 	appGroup.DELETE("/instances/:instanceName", handler.DeleteAppInstanceHandler)
-
-	appGroup.GET("/templates", handler.ListAllAppTemplatesHandler)
-	appGroup.GET("/templates/:templateName", handler.GetAppTemplateHandler)
 	appGroup.Use(corsHandler)
 }
 
@@ -56,6 +56,7 @@ func initPublicServiceRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
 	publicServiceGroup.GET("/templates", handler.ListAllPublicServiceTemplatesHandler)
 	publicServiceGroup.GET("/templates/:templateName", handler.GetPublicServiceTemplateHandler)
 
+	publicServiceGroup.GET("/instances", handler.ListAllPublicServiceInstancesHandler)
 	publicServiceGroup.GET("/instances/:instanceName", handler.GetPublicServiceInstanceHandler)
 	publicServiceGroup.POST("/instances/:instanceName", handler.CreateOrUpdatePublicServiceInstanceHandler)
 	publicServiceGroup.DELETE("/instances/:instanceName", handler.DeletePublicServiceInstanceHandler)
