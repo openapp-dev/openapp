@@ -48,6 +48,7 @@ func initAPPRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
 	appGroup.GET("/instances/:instanceName", handler.GetAppInstanceHandler)
 	appGroup.POST("/instances/:instanceName", handler.CreateOrUpdateAppInstanceHandler)
 	appGroup.DELETE("/instances/:instanceName", handler.DeleteAppInstanceHandler)
+	appGroup.GET("/instances/:instanceName/log", handler.AppInstanceLoggingHandler)
 	appGroup.Use(corsHandler)
 }
 
@@ -60,6 +61,7 @@ func initPublicServiceRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
 	publicServiceGroup.GET("/instances/:instanceName", handler.GetPublicServiceInstanceHandler)
 	publicServiceGroup.POST("/instances/:instanceName", handler.CreateOrUpdatePublicServiceInstanceHandler)
 	publicServiceGroup.DELETE("/instances/:instanceName", handler.DeletePublicServiceInstanceHandler)
+	publicServiceGroup.GET("/instances/:instanceName/log", handler.PublicServiceInstanceLoggingHandler)
 	publicServiceGroup.Use(corsHandler)
 }
 
