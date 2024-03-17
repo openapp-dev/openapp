@@ -3,6 +3,8 @@
 set -e
 
 export KO_DOCKER_REPO=${KO_DOCKER_REPO:-localhost:5000}
+export OPENAPP_GIT_VERSION=$(git describe --tags --always --dirty)
+export OPENAPP_GIT_COMMIT=$(git rev-parse HEAD)
 
 source ./hack/utils.sh
 
@@ -56,7 +58,6 @@ if [[ -z $(docker ps -a --filter name=k3s -q) ]]; then
     mkdir -p ${HOME}/.config/
     docker cp k3s:/etc/rancher/k3s/k3s.yaml ${HOME}/.config/k3s.yaml
 fi
-
 
 # 6.Deploy openapp
 export KUBECONFIG=${HOME}/.config/k3s.yaml
