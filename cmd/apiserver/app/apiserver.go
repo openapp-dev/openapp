@@ -40,7 +40,7 @@ func NewApiServerCommand(ctx context.Context) *cobra.Command {
 }
 
 func run(ctx context.Context) error {
-	klog.Info("Start openapp-apiserver...")
+	klog.Infof("Start openapp-apiserver, version: %s...", utils.GetOpenAPPVersion())
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		klog.Fatalf("Failed to get in-cluster config: %v", err)

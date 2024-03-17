@@ -35,6 +35,7 @@ func NewOpenAPPServerRouter(k8sClient kubernetes.Interface,
 	initAPPRouter(router, corsHandler)
 	initPublicServiceRouter(router, corsHandler)
 	initConfigRouter(router, corsHandler)
+	initVersionRouter(router, corsHandler)
 
 	return router
 }
@@ -70,4 +71,10 @@ func initConfigRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
 	configGroup.GET("", handler.GetConfigHandler)
 	configGroup.POST("", handler.UpdateConfigHandler)
 	configGroup.Use(corsHandler)
+}
+
+func initVersionRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
+	versionGroup := router.Group("/version")
+	versionGroup.GET("", handler.GetOpenAPPVersionHandler)
+	versionGroup.Use(corsHandler)
 }

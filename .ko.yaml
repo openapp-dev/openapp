@@ -1,0 +1,17 @@
+builds:
+- id: controller
+  dir: .  # default is .
+  main: ./cmd/controller
+  ldflags:
+  - -s -w
+  - -extldflags "-static"
+  - -X github.com/openapp-dev/openapp/pkg/utils.gitVersion={{ .Env.OPENAPP_GIT_VERSION }}
+  - -X github.com/openapp-dev/openapp/pkg/utils.gitCommit={{ .Env.OPENAPP_GIT_COMMIT }}
+- id: apiserver
+  dir: .  # default is .
+  main: ./cmd/apiserver
+  ldflags:
+  - -s -w
+  - -extldflags "-static"
+  - -X github.com/openapp-dev/openapp/pkg/utils.gitVersion={{ .Env.OPENAPP_GIT_VERSION }}
+  - -X github.com/openapp-dev/openapp/pkg/utils.gitCommit={{ .Env.OPENAPP_GIT_COMMIT }}
