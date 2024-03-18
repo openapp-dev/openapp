@@ -4,6 +4,7 @@ import (
 	"context"
 	"path"
 	"reflect"
+	"strconv"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -176,7 +177,7 @@ func (pc *PublicServiceInstanceController) handlePublicServiceInstanceDerivedRes
 	file := path.Base(manifest)
 	switch file {
 	case utils.TemplateManifestStatefulSetFile:
-		err = pc.statefulsetHandler(manifestContent, derivedResource, pubclicServiceIns.Name)
+		err = pc.statefulsetHandler(manifestContent, derivedResource, pubclicServiceIns)
 		if err != nil {
 			return err
 		}
@@ -275,9 +276,10 @@ func (pc *PublicServiceInstanceController) configmapHandler(manifestContent []by
 
 func (pc *PublicServiceInstanceController) statefulsetHandler(manifestContent []byte,
 	derivedResoruce *[]commonv1alpha1.DerivedResource,
-	instanceName string) error {
+	publicServiceIns *v1alpha1.PublicServiceInstance) error {
 	labels := map[string]string{
-		utils.PublicServiceInstanceLabelKey: instanceName,
+		utils.PublicServiceInstanceLabelKey: publicServiceIns.Name,
+		utils.InstanceGenerationLabelKey:    strconv.Itoa(int(publicServiceIns.Generation)),
 	}
 	return utils.CreateOrUpdateStatefulset(pc.k8sClient,
 		manifestContent,
