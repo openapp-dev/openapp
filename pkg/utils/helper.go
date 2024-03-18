@@ -425,6 +425,10 @@ func CreateOrUpdateStatefulset(client kubernetes.Interface,
 		}
 		return nil
 	}
+	if stsExist.Labels != nil &&
+		stsExist.Labels[InstanceGenerationLabelKey] == labels[InstanceGenerationLabelKey] {
+		return nil
+	}
 
 	// In order to make sure the sts will be restart, we should recreate it
 	err = client.AppsV1().StatefulSets(sts.Namespace).

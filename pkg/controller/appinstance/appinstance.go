@@ -4,6 +4,7 @@ import (
 	"context"
 	"path"
 	"reflect"
+	"strconv"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -142,7 +143,7 @@ func (ac *AppInstanceController) handleAppInstanceDerivedResourceCreation(appIns
 	file := path.Base(manifest)
 	switch file {
 	case utils.TemplateManifestStatefulSetFile:
-		err = ac.statefulsetHandler(manifestContent, derivedResoruce, appIns.Name)
+		err = ac.statefulsetHandler(manifestContent, derivedResoruce, appIns)
 		if err != nil {
 			klog.Errorf("Failed to handle statefulset: %v", err)
 			return err
@@ -224,9 +225,10 @@ func (ac *AppInstanceController) configmapHandler(manifestContent []byte,
 
 func (ac *AppInstanceController) statefulsetHandler(manifestContent []byte,
 	derivedResoruce *[]commonv1alpha1.DerivedResource,
-	instanceName string) error {
+	appIns *appv1alpha1.AppInstance) error {
 	labels := map[string]string{
-		utils.AppInstanceLabelKey: instanceName,
+		utils.AppInstanceLabelKey:        appIns.Name,
+		utils.InstanceGenerationLabelKey: strconv.Itoa(int(appIns.Generation)),
 	}
 	return utils.CreateOrUpdateStatefulset(ac.k8sClient,
 		manifestContent,

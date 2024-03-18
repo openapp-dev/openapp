@@ -17,6 +17,7 @@ const (
 	ServiceExposeClassLabelKey      = "service.openapp.dev/expose-class"
 	AppInstanceLabelKey             = "app.openapp.dev/app-instance"
 	PublicServiceInstanceLabelKey   = "service.openapp.dev/publicservice-instance"
+	InstanceGenerationLabelKey      = "instance.openapp.dev/instance-generation"
 
 	InstanceNamespace = "openapp"
 	SystemNamespace   = "openapp-system"
