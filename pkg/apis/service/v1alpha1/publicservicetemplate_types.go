@@ -2,6 +2,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	commonv1alpha1 "github.com/openapp-dev/openapp/pkg/apis/common/v1alpha1"
 )
 
 // +genclient
@@ -28,15 +30,8 @@ type PublicServiceTemplateSpec struct {
 	URL         string `json:"url"`
 	Inputs      string `json:"inputs"`
 	// +required
-	ExposeTypes []ExposeType `json:"exposeTypes"`
+	ExposeTypes []commonv1alpha1.ExposeType `json:"exposeTypes"`
 }
-
-type ExposeType string
-
-const (
-	ExposeLayer4 ExposeType = "Layer4"
-	ExposeLayer7 ExposeType = "Layer7"
-)
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
