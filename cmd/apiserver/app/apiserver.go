@@ -5,7 +5,6 @@ import (
 	"flag"
 
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/openapp-dev/openapp/pkg/apiserver/router"
 	openappclient "github.com/openapp-dev/openapp/pkg/generated/clientset/versioned"
-	openappinformer "github.com/openapp-dev/openapp/pkg/generated/informers/externalversions"
 	"github.com/openapp-dev/openapp/pkg/utils"
 )
 
@@ -53,35 +51,13 @@ func run(ctx context.Context) error {
 	if err != nil {
 		klog.Fatalf("Failed to create client: %v", err)
 	}
-	k8sFactory := informers.NewSharedInformerFactory(k8sClient, 0)
-	openappFactory := openappinformer.NewSharedInformerFactory(openappClient, 0)
 
-	configMapInformer := k8sFactory.Core().V1().ConfigMaps().Informer()
-	serviceInformer := k8sFactory.Core().V1().Services().Informer()
-	statefulSetInformer := k8sFactory.Apps().V1().StatefulSets().Informer()
-	appInstanceInformer := openappFactory.App().V1alpha1().AppInstances().Informer()
-	appTemplateInformer := openappFactory.App().V1alpha1().AppTemplates().Informer()
-	serviceInstanceInformer := openappFactory.Service().V1alpha1().PublicServiceInstances().Informer()
-	serviceTemplateInformer := openappFactory.Service().V1alpha1().PublicServiceTemplates().Informer()
-
-	openappHelper := utils.NewOpenAPPHelper(k8sClient, openappClient,
-		configMapInformer, serviceInformer, appInstanceInformer, serviceInstanceInformer, statefulSetInformer,
-		k8sFactory.Core().V1().ConfigMaps().Lister(),
-		openappFactory.App().V1alpha1().AppInstances().Lister(),
-		openappFactory.App().V1alpha1().AppTemplates().Lister(),
-		openappFactory.Service().V1alpha1().PublicServiceInstances().Lister(),
-		openappFactory.Service().V1alpha1().PublicServiceTemplates().Lister())
-
-	k8sFactory.Start(ctx.Done())
-	openappFactory.Start(ctx.Done())
-
+	openappHelper := utils.NewOpenAPPHelper(ctx, k8sClient, openappClient)
 	klog.Infof("Wait resource cache sync...")
 	if ok := cache.WaitForCacheSync(ctx.Done(),
-		configMapInformer.HasSynced,
-		appInstanceInformer.HasSynced,
-		appTemplateInformer.HasSynced,
-		serviceInstanceInformer.HasSynced,
-		serviceTemplateInformer.HasSynced); !ok {
+		openappHelper.ConfigMapInformer.HasSynced,
+		openappHelper.AppInstanceInformer.HasSynced,
+		openappHelper.PublicServiceInstanceInformer.HasSynced); !ok {
 		klog.Fatal("Failed to wait for cache sync")
 	}
 

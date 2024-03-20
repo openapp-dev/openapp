@@ -19,6 +19,7 @@ import (
 	apicorev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/listers/core/v1"
 	cache "k8s.io/client-go/tools/cache"
@@ -28,6 +29,7 @@ import (
 	commonv1alpha1 "github.com/openapp-dev/openapp/pkg/apis/common/v1alpha1"
 	servicev1alpha1 "github.com/openapp-dev/openapp/pkg/apis/service/v1alpha1"
 	"github.com/openapp-dev/openapp/pkg/generated/clientset/versioned"
+	openappinformer "github.com/openapp-dev/openapp/pkg/generated/informers/externalversions"
 	listerappv1alpha1 "github.com/openapp-dev/openapp/pkg/generated/listers/app/v1alpha1"
 	listerservicev1alpha1 "github.com/openapp-dev/openapp/pkg/generated/listers/service/v1alpha1"
 )
@@ -47,32 +49,37 @@ type OpenAPPHelper struct {
 	PublicServiceTemplateLister   listerservicev1alpha1.PublicServiceTemplateLister
 }
 
-func NewOpenAPPHelper(k8sClient kubernetes.Interface,
-	openappClient versioned.Interface,
-	ConfigMapInformer cache.SharedIndexInformer,
-	ServiceInformer cache.SharedIndexInformer,
-	AppInstanceInformer cache.SharedIndexInformer,
-	PublicServiceInstanceInformer cache.SharedIndexInformer,
-	StatefulSetInformer cache.SharedIndexInformer,
-	ConfigMapLister corev1.ConfigMapLister,
-	AppInstanceLister listerappv1alpha1.AppInstanceLister,
-	AppTemplateLister listerappv1alpha1.AppTemplateLister,
-	PublicServiceInstanceLister listerservicev1alpha1.PublicServiceInstanceLister,
-	PublicServiceTemplateLister listerservicev1alpha1.PublicServiceTemplateLister) *OpenAPPHelper {
-	return &OpenAPPHelper{
+func NewOpenAPPHelper(ctx context.Context,
+	k8sClient kubernetes.Interface,
+	openappClient versioned.Interface) *OpenAPPHelper {
+	k8sFactory := informers.NewSharedInformerFactory(k8sClient, 0)
+	openappFactory := openappinformer.NewSharedInformerFactory(openappClient, 0)
+
+	configMapInformer := k8sFactory.Core().V1().ConfigMaps().Informer()
+	serviceInformer := k8sFactory.Core().V1().Services().Informer()
+	statefulSetInformer := k8sFactory.Apps().V1().StatefulSets().Informer()
+	appInstanceInformer := openappFactory.App().V1alpha1().AppInstances().Informer()
+	serviceInstanceInformer := openappFactory.Service().V1alpha1().PublicServiceInstances().Informer()
+
+	helper := OpenAPPHelper{
 		K8sClient:                     k8sClient,
 		OpenAPPClient:                 openappClient,
-		ConfigMapInformer:             ConfigMapInformer,
-		ServiceInformer:               ServiceInformer,
-		AppInstanceInformer:           AppInstanceInformer,
-		PublicServiceInstanceInformer: PublicServiceInstanceInformer,
-		StatefulSetInformer:           StatefulSetInformer,
-		ConfigMapLister:               ConfigMapLister,
-		AppInstanceLister:             AppInstanceLister,
-		AppTemplateLister:             AppTemplateLister,
-		PublicServiceInstanceLister:   PublicServiceInstanceLister,
-		PublicServiceTemplateLister:   PublicServiceTemplateLister,
+		ConfigMapInformer:             configMapInformer,
+		ServiceInformer:               serviceInformer,
+		AppInstanceInformer:           appInstanceInformer,
+		PublicServiceInstanceInformer: serviceInstanceInformer,
+		StatefulSetInformer:           statefulSetInformer,
+		ConfigMapLister:               k8sFactory.Core().V1().ConfigMaps().Lister(),
+		AppInstanceLister:             openappFactory.App().V1alpha1().AppInstances().Lister(),
+		AppTemplateLister:             openappFactory.App().V1alpha1().AppTemplates().Lister(),
+		PublicServiceInstanceLister:   openappFactory.Service().V1alpha1().PublicServiceInstances().Lister(),
+		PublicServiceTemplateLister:   openappFactory.Service().V1alpha1().PublicServiceTemplates().Lister(),
 	}
+
+	k8sFactory.Start(ctx.Done())
+	openappFactory.Start(ctx.Done())
+
+	return &helper
 }
 
 func GetRegistryPaths() []string {
