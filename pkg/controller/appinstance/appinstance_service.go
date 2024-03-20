@@ -12,7 +12,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 
-	"github.com/openapp-dev/openapp/pkg/apis/app/v1alpha1"
+	commonv1alpha1 "github.com/openapp-dev/openapp/pkg/apis/common/v1alpha1"
 	"github.com/openapp-dev/openapp/pkg/controller/types"
 	"github.com/openapp-dev/openapp/pkg/generated/clientset/versioned"
 	"github.com/openapp-dev/openapp/pkg/utils"
@@ -149,7 +149,7 @@ func (sc *AppInstanceServiceController) getServiceURL(service *corev1.Service) (
 		klog.Errorf("Failed to get app template: %v", err)
 		return "", "", err
 	}
-	if appTemp.Spec.ExposeType == v1alpha1.ExposeLayer4 {
+	if appTemp.Spec.ExposeType == commonv1alpha1.ExposeLayer4 {
 		return localURL, publicURL, nil
 	}
 	if publicURL == "" {

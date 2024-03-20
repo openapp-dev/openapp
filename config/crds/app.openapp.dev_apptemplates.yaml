@@ -20,7 +20,7 @@ spec:
   versions:
   - additionalPrinterColumns:
     - jsonPath: .spec.url
-      name: APP-URL
+      name: APP-TEMPLATE-URL
       type: string
     - jsonPath: .spec.exposeType
       name: EXPOSE-TYPE
