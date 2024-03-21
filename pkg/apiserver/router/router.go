@@ -1,6 +1,8 @@
 package router
 
 import (
+	"net/http"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"k8s.io/client-go/kubernetes"
@@ -32,10 +34,18 @@ func NewOpenAPPServerRouter(k8sClient kubernetes.Interface,
 	router.Use(corsHandler)
 	router.Use(NewGinContextWithClientLister(k8sClient, openappClient, openappHelper))
 
+	// middleware
+	cfg, err := openappHelper.ConfigMapLister.ConfigMaps(utils.SystemNamespace).Get(utils.SystemConfigMap)
+	if err != nil {
+		panic(err)
+	}
+	router.Use(jwtAuth([]byte(cfg.Data["password"])))
+
 	initAPPRouter(router, corsHandler)
 	initPublicServiceRouter(router, corsHandler)
 	initConfigRouter(router, corsHandler)
 	initVersionRouter(router, corsHandler)
+	initLoginRouter(router, corsHandler)
 
 	return router
 }
@@ -77,4 +87,37 @@ func initVersionRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
 	versionGroup := router.Group("/version")
 	versionGroup.GET("", handler.GetOpenAPPVersionHandler)
 	versionGroup.Use(corsHandler)
+}
+
+func initLoginRouter(router *gin.Engine, corsHandler gin.HandlerFunc) {
+	loginGroup := router.Group("/login")
+	loginGroup.POST("", handler.LoginHandler)
+	loginGroup.Use(corsHandler)
+}
+
+func jwtAuth(secret []byte) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		token := ctx.GetHeader("Authorization")
+		if token == "" {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"code":    http.StatusUnauthorized,
+				"message": "Authorization token is required",
+			})
+			ctx.Abort()
+			return
+		}
+
+		jwt := utils.NewJWT(secret)
+		_, err := jwt.ParseToken(token)
+		if err != nil {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"code":    http.StatusUnauthorized,
+				"message": err.Error(),
+			})
+			ctx.Abort()
+			return
+		}
+
+		ctx.Next()
+	}
 }

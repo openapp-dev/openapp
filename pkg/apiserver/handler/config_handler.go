@@ -61,13 +61,13 @@ func UpdateConfigHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get openapp lister"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 	systemCfg, err := openappHelper.ConfigMapLister.ConfigMaps(utils.SystemNamespace).Get(utils.SystemConfigMap)
 	if err != nil {
 		klog.Errorf("Failed to get config: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get config"})
+		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get config", nil)
 		return
 	}
 	updatedCfg := systemCfg.DeepCopy()

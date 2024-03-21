@@ -1,12 +1,15 @@
 module github.com/openapp-dev/openapp
 
-go 1.20
+go 1.21
+
+toolchain go1.22.1
 
 require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/gin-contrib/cors v1.5.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-git/go-git/v5 v5.11.0
+	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
 	k8s.io/api v0.29.2
