@@ -11,5 +11,5 @@ func GetOpenAPPVersionHandler(ctx *gin.Context) {
 	klog.V(4).Infof("Start to query openapp version...")
 
 	version := utils.GetOpenAPPVersion()
-	returnFormattedData(ctx, 200, "Get openapp version successfully", version)
+	utils.ReturnFormattedData(ctx, 200, "Get openapp version successfully", version)
 }

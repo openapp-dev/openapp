@@ -6,6 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog"
+
+	"github.com/openapp-dev/openapp/pkg/utils"
 )
 
 func ListAllPublicServiceTemplatesHandler(ctx *gin.Context) {
@@ -13,18 +15,18 @@ func ListAllPublicServiceTemplatesHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
 	publicServiceTemps, err := openappHelper.PublicServiceTemplateLister.List(labels.Everything())
 	if err != nil {
 		klog.Errorf("Failed to list publicservice templates: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to list publicservice templates", nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, "Failed to list publicservice templates", nil)
 		return
 	}
 
-	returnFormattedData(ctx, http.StatusOK, "List publicservice templates successfully", publicServiceTemps)
+	utils.ReturnFormattedData(ctx, http.StatusOK, "List publicservice templates successfully", publicServiceTemps)
 }
 
 func GetPublicServiceTemplateHandler(ctx *gin.Context) {
@@ -32,7 +34,7 @@ func GetPublicServiceTemplateHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, "Failed to get openapp lister", nil)
 		return
 	}
 
@@ -40,9 +42,9 @@ func GetPublicServiceTemplateHandler(ctx *gin.Context) {
 	publicServiceTemp, err := openappHelper.PublicServiceTemplateLister.Get(tempName)
 	if err != nil {
 		klog.Errorf("Failed to get publicservice template: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, "Failed to get publicservice template", nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, "Failed to get publicservice template", nil)
 		return
 	}
 
-	returnFormattedData(ctx, http.StatusOK, "Get publicservice template successfully", publicServiceTemp)
+	utils.ReturnFormattedData(ctx, http.StatusOK, "Get publicservice template successfully", publicServiceTemp)
 }

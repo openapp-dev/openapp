@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"net/http"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
 )
 
@@ -47,4 +49,25 @@ func (j *JWT) ParseToken(tokenString string) (*Claims, error) {
 		return claims, nil
 	}
 	return nil, err
+}
+
+func JWTAuth(secret []byte) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		token := ctx.GetHeader("Authorization")
+		if token == "" {
+			ReturnFormattedData(ctx, http.StatusUnauthorized, "Authorization token is required", nil)
+			ctx.Abort()
+			return
+		}
+
+		jwt := NewJWT(secret)
+		_, err := jwt.ParseToken(token)
+		if err != nil {
+			ReturnFormattedData(ctx, http.StatusUnauthorized, err.Error(), nil)
+			ctx.Abort()
+			return
+		}
+
+		ctx.Next()
+	}
 }
