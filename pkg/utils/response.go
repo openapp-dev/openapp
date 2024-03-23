@@ -1,4 +1,4 @@
-package handler
+package utils
 
 import (
 	"github.com/gin-gonic/gin"
@@ -10,7 +10,7 @@ type ResponseBody struct {
 	Data    interface{} `json:"data"`
 }
 
-func returnFormattedData(ctx *gin.Context, code int, msg string, data interface{}) {
+func ReturnFormattedData(ctx *gin.Context, code int, msg string, data interface{}) {
 	res := &ResponseBody{
 		Code:    code,
 		Message: msg,

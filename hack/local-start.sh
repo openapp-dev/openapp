@@ -17,9 +17,9 @@ fi
 # 2.Install go env
 if [[ -z $(which go) ]]; then
     echo "go is not installed. Try to install go..."
-    wget https://go.dev/dl/go1.20.6.linux-amd64.tar.gz -P /tmp/
-    tar -C /usr/local -xzf /tmp/go1.20.6.linux-amd64.tar.gz
-    rm -rf /tmp/go1.20.6.linux-amd64.tar.gz
+    wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -P /tmp/
+    tar -C /usr/local -xzf /tmp/go1.22.1.linux-amd64.tar.gz
+    rm -rf /tmp/go1.22.1.linux-amd64.tar.gz
 fi
 go mod tidy
 

@@ -7,13 +7,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/openapp-dev/openapp/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog"
 
 	appv1alpha1 "github.com/openapp-dev/openapp/pkg/apis/app/v1alpha1"
+	"github.com/openapp-dev/openapp/pkg/utils"
 )
 
 func ListAllAppInstancesHandler(ctx *gin.Context) {
@@ -21,18 +21,18 @@ func ListAllAppInstancesHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
 	appIns, err := openappHelper.AppInstanceLister.List(labels.Everything())
 	if err != nil {
 		klog.Errorf("Failed to list app instances: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	returnFormattedData(ctx, http.StatusOK, "List app instances successfully", appIns)
+	utils.ReturnFormattedData(ctx, http.StatusOK, "List app instances successfully", appIns)
 }
 
 func GetAppInstanceHandler(ctx *gin.Context) {
@@ -40,7 +40,7 @@ func GetAppInstanceHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
@@ -49,11 +49,11 @@ func GetAppInstanceHandler(ctx *gin.Context) {
 		Get(insName)
 	if err != nil {
 		klog.Errorf("Failed to get app instance: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	returnFormattedData(ctx, http.StatusOK, "Get app instance successfully", appIns)
+	utils.ReturnFormattedData(ctx, http.StatusOK, "Get app instance successfully", appIns)
 }
 
 func DeleteAppInstanceHandler(ctx *gin.Context) {
@@ -61,7 +61,7 @@ func DeleteAppInstanceHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
@@ -71,11 +71,11 @@ func DeleteAppInstanceHandler(ctx *gin.Context) {
 		Delete(context.Background(), insName, metav1.DeleteOptions{})
 	if err != nil {
 		klog.Errorf("Failed to delete app instance: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	returnFormattedData(ctx, http.StatusOK, "Delete app instance successfully", nil)
+	utils.ReturnFormattedData(ctx, http.StatusOK, "Delete app instance successfully", nil)
 }
 
 func CreateOrUpdateAppInstanceHandler(ctx *gin.Context) {
@@ -83,7 +83,7 @@ func CreateOrUpdateAppInstanceHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
@@ -91,12 +91,12 @@ func CreateOrUpdateAppInstanceHandler(ctx *gin.Context) {
 	insJsonBody, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
 		klog.Errorf("Failed to read request body: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 	if err := json.Unmarshal(insJsonBody, &appIns); err != nil {
 		klog.Errorf("Failed to unmarshal request body: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 	appIns.Name = ctx.Param("instanceName")
@@ -105,11 +105,11 @@ func CreateOrUpdateAppInstanceHandler(ctx *gin.Context) {
 		Create(context.Background(), &appIns, metav1.CreateOptions{})
 	if err != nil {
 		klog.Errorf("Failed to create or update app instance: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
-	returnFormattedData(ctx, http.StatusOK, "Create or update app instance successfully", nil)
+	utils.ReturnFormattedData(ctx, http.StatusOK, "Create or update app instance successfully", nil)
 }
 
 func AppInstanceLoggingHandler(ctx *gin.Context) {
@@ -117,7 +117,7 @@ func AppInstanceLoggingHandler(ctx *gin.Context) {
 	openappHelper, err := getOpenAPPHelper(ctx)
 	if err != nil {
 		klog.Errorf("Failed to get openapp lister: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
@@ -127,13 +127,13 @@ func AppInstanceLoggingHandler(ctx *gin.Context) {
 	})
 	if err != nil {
 		klog.Errorf("Failed to get app instance's pod: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 
 	if len(pods.Items) == 0 || len(pods.Items) > 1 {
 		klog.Warningf("No resource found for app instance(%s)", insName)
-		returnFormattedData(ctx, http.StatusNotFound, "No resource found for app instance", nil)
+		utils.ReturnFormattedData(ctx, http.StatusNotFound, "No resource found for app instance", nil)
 		return
 	}
 
@@ -143,7 +143,7 @@ func AppInstanceLoggingHandler(ctx *gin.Context) {
 	podLogs, err := req.Stream(context.Background())
 	if err != nil {
 		klog.Errorf("Failed to get app instance's pod logs: %v", err)
-		returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+		utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 		return
 	}
 	defer podLogs.Close()
@@ -162,7 +162,7 @@ func AppInstanceLoggingHandler(ctx *gin.Context) {
 		logs, err := io.ReadAll(podLogs)
 		if err != nil {
 			klog.Errorf("Error reading logs: %v", err)
-			returnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+			utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 			return
 		}
 		ctx.String(http.StatusOK, string(logs))

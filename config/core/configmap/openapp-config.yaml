@@ -6,5 +6,5 @@ metadata:
 data:
   registry: |
     https://github.com/openapp-dev/openapp-registry@main
-  userName: "openapp"
+  username: "openapp"
   password: "openapp"
