@@ -16,7 +16,7 @@ import (
 
 type OpenAPPSystemConfig struct {
 	Registry string `json:"registry"`
-	UserName string `json:"userName"`
+	UserName string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -38,7 +38,7 @@ func GetConfigHandler(ctx *gin.Context) {
 
 	resp := &OpenAPPSystemConfig{}
 	resp.Registry = cfg.Data["registry"]
-	resp.UserName = cfg.Data["userName"]
+	resp.UserName = cfg.Data["username"]
 	resp.Password = cfg.Data["password"]
 	utils.ReturnFormattedData(ctx, http.StatusOK, "Get config successfully", resp)
 }
@@ -72,7 +72,7 @@ func UpdateConfigHandler(ctx *gin.Context) {
 	}
 	updatedCfg := systemCfg.DeepCopy()
 	updatedCfg.Data["registry"] = config.Registry
-	updatedCfg.Data["userName"] = config.UserName
+	updatedCfg.Data["username"] = config.UserName
 	updatedCfg.Data["password"] = config.Password
 
 	if _, err := openappHelper.K8sClient.CoreV1().ConfigMaps(utils.SystemNamespace).Update(context.TODO(),
