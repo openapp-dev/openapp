@@ -165,6 +165,6 @@ func PublicServiceInstanceLoggingHandler(ctx *gin.Context) {
 			utils.ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
 			return
 		}
-		ctx.String(http.StatusOK, string(logs))
+		utils.ReturnFormattedData(ctx, http.StatusOK, "Get public service instance logs successfully", string(logs))
 	}
 }
