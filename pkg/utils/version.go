@@ -1,9 +1,5 @@
 package utils
 
-import (
-	"encoding/json"
-)
-
 var (
 	gitVersion = "latest"
 	gitCommit  = "unknown"
@@ -14,11 +10,10 @@ type OpenAPPVersion struct {
 	GitCommit  string `json:"gitCommit"`
 }
 
-func GetOpenAPPVersion() string {
+func GetOpenAPPVersion() *OpenAPPVersion {
 	v := &OpenAPPVersion{
 		GitVersion: gitVersion,
 		GitCommit:  gitCommit,
 	}
-	data, _ := json.Marshal(v)
-	return string(data)
+	return v
 }

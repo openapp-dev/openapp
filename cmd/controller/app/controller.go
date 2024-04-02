@@ -55,7 +55,8 @@ var controllerNewFuncList = []types.NewControllerFunc{
 }
 
 func run(ctx context.Context) error {
-	klog.Infof("Start openapp-controller, version: %s...", utils.GetOpenAPPVersion())
+	version := utils.GetOpenAPPVersion()
+	klog.Infof("Start openapp-controller, version: %v, commit: %s", version.GitVersion, version.GitCommit)
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		klog.Fatalf("Failed to get in-cluster config: %v", err)
