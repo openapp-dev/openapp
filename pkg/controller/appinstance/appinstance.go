@@ -96,14 +96,6 @@ func (ac *AppInstanceController) Reconcile(resourceKey pkgtypes.NamespacedName) 
 		return ac.deleteAppInstanceResources(appIns)
 	}
 
-	appIns.Finalizers = []string{utils.AppInstanceControllerFinalizerKey}
-	appIns, err = ac.openappClient.AppV1alpha1().AppInstances(appIns.Namespace).
-		Update(context.Background(), appIns, metav1.UpdateOptions{})
-	if err != nil {
-		klog.Errorf("Failed to update app instance: %v", err)
-		return err
-	}
-
 	appTemplate := appIns.Spec.AppTemplate
 	if appTemplate == "" {
 		klog.Errorf("AppTemplate is empty in AppInstance(%s/%s)", appIns.Namespace, appIns.Name)
@@ -117,11 +109,20 @@ func (ac *AppInstanceController) Reconcile(resourceKey pkgtypes.NamespacedName) 
 			return err
 		}
 	}
+
 	appIns.Status.DerivedResources = derivedResoruce
-	_, err = ac.openappClient.AppV1alpha1().AppInstances(appIns.Namespace).
+	appIns, err = ac.openappClient.AppV1alpha1().AppInstances(appIns.Namespace).
 		UpdateStatus(context.Background(), appIns, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("Failed to update app instance status: %v", err)
+		return err
+	}
+
+	appIns.Finalizers = []string{utils.AppInstanceControllerFinalizerKey}
+	_, err = ac.openappClient.AppV1alpha1().AppInstances(appIns.Namespace).
+		Update(context.Background(), appIns, metav1.UpdateOptions{})
+	if err != nil {
+		klog.Errorf("Failed to update app instance: %v", err)
 		return err
 	}
 
