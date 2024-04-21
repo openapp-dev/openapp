@@ -100,6 +100,8 @@ func CreateOrUpdatePublicServiceInstanceHandler(ctx *gin.Context) {
 		return
 	}
 
+	ins.Name = ctx.Param("instanceName")
+	ins.Namespace = utils.InstanceNamespace
 	_, err = openappHelper.OpenAPPClient.ServiceV1alpha1().PublicServiceInstances(utils.InstanceNamespace).
 		Create(context.Background(), &ins, metav1.CreateOptions{})
 	if err != nil {
