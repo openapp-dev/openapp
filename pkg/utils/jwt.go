@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
+	corev1 "k8s.io/client-go/listers/core/v1"
 )
 
 type Claims struct {
@@ -51,8 +52,14 @@ func (j *JWT) ParseToken(tokenString string) (*Claims, error) {
 	return nil, err
 }
 
-func JWTAuth(secret []byte) gin.HandlerFunc {
+func JWTAuth(cmLister corev1.ConfigMapLister) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		systemCfg, err := cmLister.ConfigMaps(SystemNamespace).Get(SystemConfigMap)
+		if err != nil {
+			ReturnFormattedData(ctx, http.StatusInternalServerError, err.Error(), nil)
+			ctx.Abort()
+			return
+		}
 		token := ctx.GetHeader("Authorization")
 		if token == "" {
 			ReturnFormattedData(ctx, http.StatusUnauthorized, "Authorization token is required", nil)
@@ -60,9 +67,8 @@ func JWTAuth(secret []byte) gin.HandlerFunc {
 			return
 		}
 
-		jwt := NewJWT(secret)
-		_, err := jwt.ParseToken(token)
-		if err != nil {
+		jwt := NewJWT([]byte(systemCfg.Data["password"]))
+		if _, err := jwt.ParseToken(token); err != nil {
 			ReturnFormattedData(ctx, http.StatusUnauthorized, err.Error(), nil)
 			ctx.Abort()
 			return

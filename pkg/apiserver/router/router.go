@@ -4,7 +4,6 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog"
 
 	"github.com/openapp-dev/openapp/pkg/apiserver/handler"
 	"github.com/openapp-dev/openapp/pkg/generated/clientset/versioned"
@@ -38,11 +37,7 @@ func NewOpenAPPServerRouter(k8sClient kubernetes.Interface,
 	initLoginRouter(router, corsHandler)
 
 	// middleware
-	cfg, err := openappHelper.ConfigMapLister.ConfigMaps(utils.SystemNamespace).Get(utils.SystemConfigMap)
-	if err != nil {
-		klog.Fatalf("Failed to get openapp system config: %v", err)
-	}
-	router.Use(utils.JWTAuth([]byte(cfg.Data["password"])))
+	router.Use(utils.JWTAuth(openappHelper.ConfigMapLister))
 
 	initAPPRouter(router, corsHandler)
 	initPublicServiceRouter(router, corsHandler)
